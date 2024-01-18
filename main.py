@@ -13,33 +13,53 @@ from pydub import AudioSegment
 import math
 import pyttsx3
 from moviepy.editor import VideoFileClip
+from moviepy.config import change_settings
+
 
 # import Pygame
 
-cartoon_video_path = "StarterVideos/Regular Show - Most Funniest Moments.mp4"
-mindless_video_path = "StarterVideos/tiktok_mobile_games_10min.mp4"
+cartoon_video_path = "F:\Videos\DownloadedContent\RickAndMorty\Summer and Morty Become One _ Rick and Morty _ adult swim.mp4"
+mindless_video_path = "F:/Videos/DownloadedContent/MindlessVideos/73 Snacks From Tasty.mp4"
 music_path = "MusicAudio/RiseAbove.mp3_trimmed.mp3"
 music_mp3 = "RiseAbove.mp3"
 content_folder_path = "Y_Clips"
 mindless_folder_path = "X_Clips"
 stacked_folder_path = "XY_Clips"
 temp_audio_path = "TempAudio"
+final_video_path = "FinalVideos"
 
 
 # This is a list of the seconds of each clip in the cartoon_video_path. These of course need to be very accurate
-clip_times = [[59, 94], [95, 109], [110, 130]]
+#clip_times = [[0, 13], [13.5, 35], [36, 44], [45, 59], [68, 77]]
+clip_times =[[0, 60],[60.01, 120],[120.01, 145]]
 
 
 # ------ Helper Functions -------
+
+def we_are_done(sentence):
+   # Initialize the TTS engine
+    engine = pyttsx3.init()
+
+    # Set properties (optional)
+    engine.setProperty('rate', 150)  # Speed of speech
+
+    # Convert text to speech and play
+    engine.say(sentence)
+    engine.runAndWait()
+
+    # Allow the speech to play for a few seconds
+    time.sleep(5)
 
 def show_clip_times(clip_times_list):
     for i, ranges in enumerate(clip_times_list):
         print(f"Clip #{i+1} begins at time: {ranges[0]} and ends at time: {ranges[1]}")
 
+
 def get_clip_duration(video_clip):
     print("\n--- Getting Clip Duration --- \n")
     clip_duration = video_clip.duration
     return clip_duration
+
 
 def background_music_jump(music_mp3):
     print("\n--- Jumping Background Music --- \n")
@@ -53,6 +73,7 @@ def background_music_jump(music_mp3):
 
     # Export the trimmed audio to a new file
     trimmed_audio.export((f"MusicAudio/{music_mp3}_trimmed.mp3"), format="mp3")
+
 
 def add_background_music(video_clip, music_path):
     print("\n--- Adding Background Music --- \n")
@@ -71,11 +92,13 @@ def add_background_music(video_clip, music_path):
 
     return video_clip
 
+
 def crop_to_iphone_size(vid):
     print("\n---  Cropping to iPhone size --- ")
     (w, h) = vid.size
-    vid = crop(vid, width=480, height=720, x_center=w / 2, y_center=h / 2)
+    vid = crop(vid, width=596, height=530, x_center=w / 2, y_center=h / 2)
     return vid
+
 
 def vertically_stack(content_file, mindless_file):
     print("\n--- Vertically Stacking Clips ---")
@@ -102,6 +125,7 @@ def vertically_stack(content_file, mindless_file):
 
     return stacked_clip
 
+
 def convert_to_mp3(vid, count):
     print("\n--- Converting Video to MP3 ---")
     # video_clip = VideoFileClip(vid)
@@ -109,22 +133,103 @@ def convert_to_mp3(vid, count):
     audio_clip.write_audiofile(f"TempAudio/temp_audio_{count}.mp3")
     return audio_clip
 
+
 def transcribe_audio(audio_clip):
     print("\n--- Transcribing Audio ---")
-    model = whisper.load_model("base")
+    model = whisper.load_model("medium.en")
     # audio = whisper.load_audio(audio_clip)
     result = whisper_timestamped.transcribe(model, audio_clip)
     print(result["text"])
     return result
 
-def add_subtitles(result, video, vid_count):
-     # Specify the path to the Montserrat-Bold.ttf file
-    font_path_bold = 'Fonts\Montserrat-Bold\static\Montserrat-Bold.ttf'
+    # Specify the path to the Montserrat-Bold.ttf file
+    font_path_bold = "Fonts\Montserrat-Bold\static\Montserrat-Bold.ttf"
 
     subs = []
     clip = VideoFileClip(video)
     subs.append(clip)
+
     for segment in result["segments"]:
+        for word in segment["words"]:
+            text = word["text"].upper()
+            start = word["start"]
+            end = word["end"]
+            duration = end - start
+
+            # Create text clip using MoviePy's TextClip
+            txt_clip = TextClip(
+                txt=text,
+                fontsize=55,
+                color="yellow",
+                bg_color="black",
+                stroke_width=2,
+                stroke_color="white",
+                font=font_path_bold,
+                method="caption",  # Use 'caption' method instead of 'label' (default)
+                kerning=True,
+            )
+
+            # Apply shadow effect
+            shadow_clip = txt_clip.fx(
+                lambda x: x.margin(10, color=(0, 0, 0), opacity=0.7)
+            )
+
+            # Apply scaling or "burst" effect
+            burst_clip = txt_clip.fx(
+                lambda x: x.resize(
+                    width=x.w * 1.2, height=x.h * 1.2, resample="bicubic"
+                )
+            )
+
+            # Set position, start time, and duration for both shadow and burst clips
+            shadow_clip = (
+                shadow_clip.set_start(start)
+                .set_duration(duration)
+                .set_pos(("center", "center"))
+            )
+            burst_clip = (
+                burst_clip.set_start(start)
+                .set_duration(duration)
+                .set_pos(("center", "center"))
+            )
+
+            # Add shadow and burst clips to the list
+            subs.append(shadow_clip)
+            subs.append(burst_clip)
+
+    # Create composite video clip
+    composite_clip = CompositeVideoClip(subs)
+
+    # Combine the composite clip with the original video
+    final_clip = CompositeVideoClip([clip, composite_clip])
+
+    # Write the final video file
+    return final_clip.write_videofile(f"FinalVideos/final_video_{vid_count}.mp4")
+
+
+def add_subtitles(result, video, vid_count):
+    # Specify the corrected path to the BubblegumSans-Regular.ttf file
+    font_path_bold = r"F:/CodeProjects/ClipCrop&Merge/Fonts/Bubblegum_Sans/BubblegumSans-Regular.ttf"
+
+    # Check if the font file is found
+    try:
+        with open(font_path_bold):
+            print("Font found")
+    except FileNotFoundError:
+        print("Font not found")
+    subs = []
+    clip = VideoFileClip(video)
+    subs.append(clip)
+
+    # Flag for the color swap
+    flag = True
+
+    for segment in result["segments"]:
+        if flag:
+            curr_color = 'yellow'
+        else:
+            curr_color = 'white'
+
         for word in segment["words"]:
             text = word["text"].upper()
             start = word["start"]
@@ -132,11 +237,10 @@ def add_subtitles(result, video, vid_count):
             duration = end - start
             txt_clip = TextClip(
                 txt=text,
-                fontsize=55,
-                color="yellow",  # Change the font color
-                bg_color="black",  # Set a background color
-                stroke_width=2,  # Increase stroke width
-                stroke_color="white",  # Set the stroke color
+                fontsize=65,
+                color=curr_color,
+                stroke_width=4.0,
+                stroke_color="black",
                 font=font_path_bold,
             )
             txt_clip = (
@@ -145,15 +249,64 @@ def add_subtitles(result, video, vid_count):
                 .set_pos(("center", "center"))
             )
             subs.append(txt_clip)
+            flag = not flag 
 
-    clip = CompositeVideoClip(subs)
-    return clip.write_videofile(f"FinalVideos/final_video_{vid_count}.mp4")
+    final_clip = CompositeVideoClip(subs)
+
+    if final_clip.duration > 60:
+        final_clip = final_clip.subclip(0, 60)
+    
+    return final_clip.write_videofile(f"FinalVideos/final_video_{vid_count}.mp4", fps=24)
+
+
+def add_video_part(clip_path, part):
+    print("\n--- Adding Video Part ---")
+
+    video_clip = VideoFileClip(clip_path)
+    
+    # Create the TextClip
+    text_clip = TextClip(
+        txt=f"Part {part}.",
+        fontsize=60,
+        color="blue",
+        stroke_width=3.0,
+        stroke_color="blue",
+    )
+
+    text_clip = text_clip.set_position(("center", 65))
+    text_clip = text_clip.set_duration(video_clip.duration)
+
+    final_clip = CompositeVideoClip([video_clip, text_clip])
+
+    if final_clip.duration > 59.5:
+        final_clip = final_clip.subclip(.5, 59.8)
+
+    return final_clip.write_videofile(f"FinalFinalVideos/final_video_{part}_wPart.mp4", fps=24)
+
+
+def clear_all_temp_files():
+    print("\n--- Clearing all Temp Files ---")
+    # Clear all temp audio files
+    for file in os.listdir(temp_audio_path):
+        os.remove(os.path.join(temp_audio_path, file))
+
+    for file in os.listdir(content_folder_path):
+        os.remove(os.path.join(content_folder_path, file))
+
+    for file in os.listdir(mindless_folder_path):
+        os.remove(os.path.join(mindless_folder_path, file))
+    
+    for file in os.listdir(stacked_folder_path):
+        os.remove(os.path.join(stacked_folder_path, file))
+
+    print("--- All temporary files have been removed ---")
+
 
 # ------ Helper Functions End -------
 
 
-
 # ______________________ RUN TIME FUNCTIONS BEGIN _____________________________________________________________________
+
 
 # Creates numerous subclips of the original video based on the clip_times list, writes them to the Y_Clips folder
 def create_indv_cartoon_clips(cartoon_video_path, clip_times):
@@ -188,6 +341,7 @@ def create_indv_cartoon_clips(cartoon_video_path, clip_times):
         clip.write_videofile(f"Y_Clips/content_clip{i+1}.mp4")
 
     return clip_count
+
 
 # Now we need a function to create the gameplay clips that are cropped to the same size, and have the same length as the content_subclips for each clip in the Y_clips folder
 # We can take the large video and pick a random point in the middle and run that for as long as the corresponding clip & then crop that to iPhone size
@@ -235,14 +389,15 @@ def create_mindless_clips(mindless_video_path, folder_path="Y_Clips"):
             timed_mindless_clip = timed_mindless_clip.without_audio()
 
             # Adding the background music to the mindless clip which is now trimmed to the same length as the content clip & cropped to iPhone size
-            '''
+            """
             #timed_mindless_clip = add_background_music(timed_mindless_clip, music_path)
-            '''
+            """
 
             # Writing the cropped and timed mindless clip to the X_Clips folder
             # print(f"Creating clip } of {clip_count}")
             timed_mindless_clip.write_videofile(f"X_Clips/mindless_clip{count}.mp4")
             count += 1
+
 
 # Creating a function that will take the content clips and the mindless clips and stack them together vertically
 def created_stacked_clips(content_folder_path, mindless_folder_path):
@@ -279,10 +434,10 @@ def created_stacked_clips(content_folder_path, mindless_folder_path):
             stacked_vid = vertically_stack(temp_content_file, temp_mindless_file)
             stacked_vid.write_videofile(f"XY_Clips/stacked_clip{i+1}.mp4")
 
+
 # NEXT UP TO IS ADD SUBTITLES AND YOURE GOLDEN !!!!!
 def generated_subtitled_videos():
     print("\n--- Generating Subtitled Videos ---")
-
     result_list = []
 
     # Set count for naming of audio files
@@ -294,22 +449,20 @@ def generated_subtitled_videos():
     # Generate temp_audio files into TempAudio folder --> could make this a function if I wanted
     
     for filename in os.listdir(content_folder_path):
-
         # Need to convert the CONTENT VIDEOS to a video file
         vid = VideoFileClip(f"{content_folder_path}/{filename}")
 
         # Turn that video file to an mp3 and increase count by 1
         audio = convert_to_mp3(vid, count)
         count += 1
-
         time.sleep(1)
-        
 
     # Locating the temp_audio files and transcribing each using WhisperAI. This creates a 'result' dictionary that we append to the result_list. Directly creating final videos from here
     for filename in os.listdir(temp_audio_path):
         full_audio_path = temp_audio_path + "/" + filename
         result = transcribe_audio(full_audio_path)
         result_list.append(result)
+    
 
     # Adding the subtitles to the final videos and writing them to the FinalVideos folder.
     for idx, file in enumerate(os.listdir(stacked_folder_path)):
@@ -317,15 +470,22 @@ def generated_subtitled_videos():
         add_subtitles(result_list[idx], full_file_path, vid_count)
         vid_count += 1
 
+    vid_count = 1
+
+    # Add the "Part X" textclip to the file
+    for idx, file in enumerate(os.listdir(final_video_path)):
+        full_file_path = f"{final_video_path}/{file}"
+        add_video_part(full_file_path, vid_count)
+        vid_count += 1
+
 # _________________________________________ RUN TIME FUNCTIONS END _______________________________________________________________
-        
+video_paths = [
 
+]
 
-
-
-
-
-
+for vid_path in video_paths:
+    cartoon_video_path = vid_path
+    break
 
 # Shows the clip times, you need to manually create this list
 show_clip_times(clip_times)
@@ -343,6 +503,11 @@ created_stacked_clips(content_folder_path, mindless_folder_path)
 # Adds subtitles to the video, font and other display can be changed in add_subtitles helper function
 generated_subtitled_videos()
 
+#Letting me know we are done
+we_are_done("We are done! We are done!")
+# Delete all the temporary files
+time.sleep(2)
+#clear_all_temp_files()
 
 
 # __________________________________________ Helper Functions Testing  ____________________________________________________________
