@@ -18,10 +18,10 @@ from moviepy.config import change_settings
 
 # import Pygame
 
-cartoon_video_path = "F:\Videos\DownloadedContent\RickAndMorty\Summer and Morty Become One _ Rick and Morty _ adult swim.mp4"
-mindless_video_path = "F:/Videos/DownloadedContent/MindlessVideos/73 Snacks From Tasty.mp4"
-music_path = "MusicAudio/RiseAbove.mp3_trimmed.mp3"
-music_mp3 = "RiseAbove.mp3"
+cartoon_video_path = "{ENTER FULL PATH TO CARTOON .MP4}"
+mindless_video_path = "{ENTER FULL PATH TO MINDLESS VIDEO .MP4}"
+music_path = "{ENTER FULL PATH TO BACKGROUND MUSIC .MP3 -- IT IS CURRENTLY DISABLED}"
+music_mp3 = "{ENTER JUST THE .MP3 TO BACKGROUND MUSIC .MP3 -- IT IS CURRENTLY DISABLED}"
 content_folder_path = "Y_Clips"
 mindless_folder_path = "X_Clips"
 stacked_folder_path = "XY_Clips"
